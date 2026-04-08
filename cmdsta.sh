@@ -327,12 +327,12 @@ cmdstash: the completion script must be evaluated by the shell, try running:
 :a s/^[[:blank:]]*\$//; t b; s/^[[:blank:]][[:blank:]]*#//; t b; b; :b =; q")" ]] || return 1
 	case "${COMP_WORDS[COMP_CWORD]}" in
 		/*|./*|../*)
-			mapfile -t COMPREPLY <<<"$(compgen -f -- "${COMP_WORDS[COMP_CWORD]}")";;
+			mapfile -t COMPREPLY < <(compgen -f -- "${COMP_WORDS[COMP_CWORD]}");;
 		*)
 			local __cmds
 			__cmds="$(CMDSTASH_COMPLETION=bash "$_script" -\$)"
-			[[ "$__cmds" ]] && mapfile -t COMPREPLY <<<"$(compgen \
-				-W "-h $__cmds" -- "${COMP_WORDS[COMP_CWORD]}")"
+			[[ "$__cmds" ]] && mapfile -t COMPREPLY < <(compgen -W "-h $__cmds" \
+				-- "${COMP_WORDS[COMP_CWORD]}")
 	esac
 }
 _cmdstash_complete() {
