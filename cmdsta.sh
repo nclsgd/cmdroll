@@ -294,17 +294,17 @@ options:   -h   display this help and exit
 		printf '%s\n' "no commands defined or missing \`__CMDSTASH__' marker line"
 		return
 	}
-	printf '%s\n' "commands (and aliases):"
+	printf '%s\n' "commands:"
 	printf '%s\n' "$__CMDSTASH_CMDS" | sed -n '/^#/d; /^$/d;
-/^>/ { s/^>/\n   >> /p; :H { n; s/^>/   >> /p; t H; } }
-s/^\t/        /p; t;
-s/^[^ ]* //; s/ /|/; s/ /||/g;
-s/|/                                                  /;
-/ /s/[^ ][^ ]*$/(&)/;
-s/^\(..................................................\)  */\1  /;
-/^..................................................[^ ]/s/  */  /;
-s/||/, /g;
-s/^/  /p;'
+/^>/ { s/^>/\n -- /p; :H { n; s/^>/ -- /p; t H; } }
+/^\t/ { s/^\t/                        /p; b; }
+s/^[^ ]* //;
+s/ /, /g; s/^/  /; $p; N;
+/\n\t/!{ P; D; }
+s/\n/                        \n/;
+s/^\(.....................\)    *\n\t/\1   /;
+/^.....................   /!s/ *\n\t/\n                        /;
+p;'
 	ABOUT="$(trim "${ABOUT:-}")"
 	if [ "$ABOUT" ]; then printf '\n%s\n' "$ABOUT"; fi
 }
@@ -370,11 +370,11 @@ die "cmdstash: invalid chain command alias definition: $CMDSTASH_CHAINALIAS";; e
 	__CMDSTASH_CMDS="$(printf '%s\n' "$__CMDSTASH_CMDS" | sed -n "
 /^>/ { i\\
 chain chain ${CMDSTASH_CHAINALIAS:-}\\
-	invoke commands in sequence  (use \`chain -h' for more information)
+	invoke commands in sequence  (\`chain -h' for more info)
 b cont; }
 \$ { a\\
 chain chain ${CMDSTASH_CHAINALIAS:-}\\
-	invoke commands in sequence  (use \`chain -h' for more information)
+	invoke commands in sequence  (\`chain -h' for more info)
 b cont; }
 p; b; :cont { p; n; b cont; }")"
 }
