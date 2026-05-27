@@ -4,7 +4,7 @@
 
 # cmdstash: a portable and embeddable shell script micro-framework to create
 #           handy command wrappers   <https://github.com/nclsgd/cmdstash>
-# Version 1.0.0
+# Version 1.0.1
 # SPDX-License-Identifier: 0BSD
 # Copyright (C) 2025-2026 Nicolas Godinho <nicolas@godinho.me>
 
@@ -398,6 +398,14 @@ while [ "${___v#* }" != "${___v%% *}" ]; do
 done
 unset ___v
 
+# Check that all the commands have their expected functions:
+[ "${CMDSTASH_NOCMDFUNCCHECK:-}" ] || for ___v in \
+$(printf '%s\n' "$__CMDSTASH_CMDS" | sed '/^[#>[:blank:]]/d; /^$/d; s/ .*//;'); do
+	[ "$(PATH='' command -v "$___v" 2>/dev/null ||:)" ] || die \
+		"cmdstash: missing command function: $___v"
+done
+unset ___v
+
 ___x=''  # xtrace option
 while [ "${1+x}" ]; do ___o="$1"; shift; case "$___o" in
 	-x) ___x=x ;;
@@ -441,11 +449,6 @@ CMDHELP="${___c#"$CMDFUNC $CMD "}"
 unset ___c; shift
 # shellcheck disable=SC2034  # CMDHELP is unused here but left for users
 readonly CMD CMDFUNC CMDHELP
-
-# Only allow commands to be shell functions and complains if not so:
-[ "${CMDSTASH_NOCMDFUNCCHECK:-}" ] || case "$(command -v "$CMDFUNC" 2>/dev/null ||:)" in
-	''|/*) die "cmdstash: $CMD: missing shell function: $CMDFUNC";;
-esac
 
 # Append the command name to the self contaxtual value for say/die:
 __CMDSTASH_SELF="$CMDSTASH_ARGZERO $CMD"
