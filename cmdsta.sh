@@ -25,9 +25,10 @@ say() {
 
 # Terminate shell with a context-prefixed explanation message on stderr:
 die() {
+	[ "${1+x}" ] || set -- "an error has occurred"
 	# shellcheck disable=SC2015   # yes, A && B || C is not if-then-else
 	printf>&2 '%s:' "${__CMDSTASH_SELF:-${CMDSTASH_ARGZERO:-$0}}" &&\
-	printf>&2 ' %s' "${@:-an error has occurred}" && printf>&2 '\n' ||:
+	printf>&2 ' %s' "$@" && printf>&2 '\n' ||:
 	exit 1
 }
 
