@@ -1,7 +1,2 @@
-* Version __cmdstash_* Bash completion functions
-
-* Define a hidden `-!' option to get the list of commands in a clean manner to
-  avoid parsing `-h' output
-
 * Write tests suites with chosen versions of Bash, zsh, ksh, sh (dash, BusyBox
   sh), etc.
