@@ -4,7 +4,7 @@
 
 # cmdstash: a portable and embeddable shell script micro-framework to create
 #           handy command wrappers   <https://github.com/nclsgd/cmdstash>
-# Version 1.0.1
+# Version 1.0.2
 # SPDX-License-Identifier: 0BSD
 # Copyright (C) 2025-2026 Nicolas Godinho <nicolas@godinho.me>
 
