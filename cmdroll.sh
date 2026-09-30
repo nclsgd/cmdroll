@@ -2,24 +2,24 @@
 # shellcheck disable=SC2317,SC2329   # silence code unreachability warnings
 # vim: set ft=sh ts=4 sw=4 noet ai tw=79:
 
-# cmdstash: a portable and embeddable shell script micro-framework to create
-#           handy command wrappers   <https://github.com/nclsgd/cmdstash>
+# cmdroll: a portable and embeddable shell script micro-framework to create
+#          handy command wrappers    <https://github.com/nclsgd/cmdroll>
 # Version 1.0.2
 # SPDX-License-Identifier: 0BSD
 # Copyright (C) 2025-2026 Nicolas Godinho <nicolas@godinho.me>
 
-# cmdstash dedicated constants and runtime checks:
-CMDSTASH_ARGZERO="${0:?}"
-# Handle zsh pure mode where $0 would be the cmdstash file and not the source:
+# cmdroll dedicated constants and runtime checks:
+CMDROLL_ARGZERO="${0:?}"
+# Handle zsh pure mode where $0 would be the cmdroll file and not the source:
 if [ "${ZSH_ARGZERO:-}" ] && [ "$(builtin emulate 2>/dev/null)" = zsh ]; then
-	CMDSTASH_ARGZERO="$ZSH_ARGZERO"
+	CMDROLL_ARGZERO="$ZSH_ARGZERO"
 fi
-readonly CMDSTASH_ARGZERO
+readonly CMDROLL_ARGZERO
 
 # Write a message on stderr with a context prefix:
 say() {
 	# shellcheck disable=SC2015   # yes, A && B || C is not if-then-else
-	printf>&2 '%s:' "${__CMDSTASH_SELF:-${CMDSTASH_ARGZERO:-$0}}" &&\
+	printf>&2 '%s:' "${__CMDROLL_SELF:-${CMDROLL_ARGZERO:-$0}}" &&\
 	printf>&2 ' %s' "$@" && printf>&2 '\n' ||:
 }
 
@@ -27,7 +27,7 @@ say() {
 die() {
 	[ "${1+x}" ] || set -- "an error has occurred"
 	# shellcheck disable=SC2015   # yes, A && B || C is not if-then-else
-	printf>&2 '%s:' "${__CMDSTASH_SELF:-${CMDSTASH_ARGZERO:-$0}}" &&\
+	printf>&2 '%s:' "${__CMDROLL_SELF:-${CMDROLL_ARGZERO:-$0}}" &&\
 	printf>&2 ' %s' "$@" && printf>&2 '\n' ||:
 	exit 1
 }
@@ -40,8 +40,8 @@ trim() {
 }
 
 # Ensure sed is available via PATH resolution:
-[ "${CMDSTASH_NOSEDCHECK:-}" ] || case "$(command -v sed)" in \
-/*);; *) die "cmdstash: \`sed' seems unfound in PATH";; esac
+[ "${CMDROLL_NOSEDCHECK:-}" ] || case "$(command -v sed)" in \
+/*);; *) die "cmdroll: \`sed' seems unfound in PATH";; esac
 
 # Quote arguments following POSIX shell escaping rules:
 quote() {
@@ -53,68 +53,68 @@ quote() {
 }
 
 # Retrieve from parent script the user working directory (if provided):
-: "${CMDSTASH_USERWORKDIR:="${PWD:?}"}"
-readonly CMDSTASH_USERWORKDIR
+: "${CMDROLL_USERWORKDIR:="${PWD:?}"}"
+readonly CMDROLL_USERWORKDIR
 
-# Compute path relative to the user working directory (CMDSTASH_USERWORKDIR):
+# Compute path relative to the user working directory (CMDROLL_USERWORKDIR):
 rel2uwd() {
-	case "$CMDSTASH_USERWORKDIR" in /*);; *) die \
-		"rel2uwd: CMDSTASH_USERWORKDIR is not an absolute path";; esac
+	case "$CMDROLL_USERWORKDIR" in /*);; *) die \
+		"rel2uwd: CMDROLL_USERWORKDIR is not an absolute path";; esac
 	case "$#" in 0) die "rel2uwd: missing path";; 1);; *) die \
 		"rel2uwd: too many arguments";; esac
 	case "${1:?}" in
 		/*) printf '%s' "$1";;
-		*)  printf '%s' "$CMDSTASH_USERWORKDIR/$1";;
+		*)  printf '%s' "$CMDROLL_USERWORKDIR/$1";;
 	esac
 }
 
 # Retrieve the shell to be used by the parent script:
-CMDSTASH_SHELL="$(cd "$CMDSTASH_USERWORKDIR" &&\
-	sed <"$CMDSTASH_ARGZERO" 's/^#!//;q')" || die
-CMDSTASH_SHELL="$(trim "$CMDSTASH_SHELL")" || die
-case "$CMDSTASH_SHELL" in
-	'') die "cmdstash: \$0 does not begin with a shebang: $CMDSTASH_ARGZERO";;
+CMDROLL_SHELL="$(cd "$CMDROLL_USERWORKDIR" &&\
+	sed <"$CMDROLL_ARGZERO" 's/^#!//;q')" || die
+CMDROLL_SHELL="$(trim "$CMDROLL_SHELL")" || die
+case "$CMDROLL_SHELL" in
+	'') die "cmdroll: \$0 does not begin with a shebang: $CMDROLL_ARGZERO";;
 	[!/]*|*[!/a-zA-Z0-9_:,.\ +-]*)
-		die "cmdstash: unexpected shebang read: #!$CMDSTASH_SHELL";;
+		die "cmdroll: unexpected shebang read: #!$CMDROLL_SHELL";;
 esac
 
 # Shell special features:
-CMDSTASH_SHELLFEAT=''
+CMDROLL_SHELLFEAT=''
 # Probe if the shell supports readonly functions with `readonly -f' (Bash):
 if [ "$(eval 2>/dev/null \
 '_f(){ echo 1;}; readonly>&2 -f _f||:; _f(){ echo 2;}||:; _f||:')" = 1 ]; then
-	CMDSTASH_SHELLFEAT="$CMDSTASH_SHELLFEAT${CMDSTASH_SHELLFEAT:+:}readonlyfuncs"
+	CMDROLL_SHELLFEAT="$CMDROLL_SHELLFEAT${CMDROLL_SHELLFEAT:+:}readonlyfuncs"
 fi
 # Probe if the shell does not word-split the same way POSIX sh does (zsh):
 # shellcheck disable=SC2086  # word splitting is expected here
 case "$(___v="a b"; set -- $___v; echo $#)" in
 	2) :;;
-	1) CMDSTASH_SHELLFEAT="$CMDSTASH_SHELLFEAT${CMDSTASH_SHELLFEAT:+:}zshnowordsplit";;
+	1) CMDROLL_SHELLFEAT="$CMDROLL_SHELLFEAT${CMDROLL_SHELLFEAT:+:}zshnowordsplit";;
 	*) die "unexpected result while probing for shell word splitting behavior";;
 esac
-readonly CMDSTASH_SHELLFEAT
+readonly CMDROLL_SHELLFEAT
 
 # Mark the basic utility functions as readonly if supported:
-case ":$CMDSTASH_SHELLFEAT:" in *:readonlyfuncs:*)
+case ":$CMDROLL_SHELLFEAT:" in *:readonlyfuncs:*)
 	# shellcheck disable=SC3045  # `readonly -f' support is validated above
 	readonly -f say die trim quote rel2uwd ;;
 esac
 
-# If "zshnowordsplit", treat CMDSTASH_SHELL as array for auto word-split:
-case ":$CMDSTASH_SHELLFEAT:" in *:zshnowordsplit:*)
-	eval "CMDSTASH_SHELL=($CMDSTASH_SHELL)";;
+# If "zshnowordsplit", treat CMDROLL_SHELL as array for auto word-split:
+case ":$CMDROLL_SHELLFEAT:" in *:zshnowordsplit:*)
+	eval "CMDROLL_SHELL=($CMDROLL_SHELL)";;
 esac
 
-# Freeze CMDSTASH_SHELL:
-readonly CMDSTASH_SHELL
+# Freeze CMDROLL_SHELL:
+readonly CMDROLL_SHELL
 
-__CMDSTASH_CMDS='# cmdstash commands defintion table, DO NOT EDIT!'
-__CMDSTASH_CURSECTION=''
+__CMDROLL_CMDS='# cmdroll commands defintion table, DO NOT EDIT!'
+__CMDROLL_CURSECTION=''
 unset ABOUT
 
 # Declaring CMD (commands):
-CMD() { _cmdstash_CMD "$@"; }
-_cmdstash_CMD() {
+CMD() { _cmdroll_CMD "$@"; }
+_cmdroll_CMD() {
 	___v=''  # function name behind the command
 	while [ "${1+x}" ]; do ___o="$1"; shift; case "$___o" in
 		-f)  [ "${1+x}" ] || die "CMD: missing function name"
@@ -133,12 +133,12 @@ _cmdstash_CMD() {
 			[ "$(eval 2>/dev/null "$___v(){ echo ok;}&& $___v")" = ok ] || die \
 				"CMD: accepted command name but illegal function name: $___v"
 	esac
-	[ "${__CMDSTASH_CURSECTION:-}" ] && {
-		__CMDSTASH_CMDS="$__CMDSTASH_CMDS
-$__CMDSTASH_CURSECTION"
-		__CMDSTASH_CURSECTION=''
+	[ "${__CMDROLL_CURSECTION:-}" ] && {
+		__CMDROLL_CMDS="$__CMDROLL_CMDS
+$__CMDROLL_CURSECTION"
+		__CMDROLL_CURSECTION=''
 	}
-	__CMDSTASH_CMDS="$__CMDSTASH_CMDS
+	__CMDROLL_CMDS="$__CMDROLL_CMDS
 $___v"  # no leading whitespace here!
 	unset ___v
 	while [ "${1+x}" ]; do
@@ -146,31 +146,31 @@ $___v"  # no leading whitespace here!
 			--) shift; break ;;
 			''|-*|*[!a-zA-Z0-9_.:@+-]*) die "CMD: invalid command name: $1";;
 		esac
-		__CMDSTASH_CMDS="$__CMDSTASH_CMDS $1"; shift
+		__CMDROLL_CMDS="$__CMDROLL_CMDS $1"; shift
 	done
 	if [ "${1+x}" ]; then
-		__CMDSTASH_CMDS="$__CMDSTASH_CMDS
+		__CMDROLL_CMDS="$__CMDROLL_CMDS
 $(trim "$(printf '%s ' "$@")" | sed '/^[[:space:]]*$/d;s/^/\t/')"
 	fi
 }
 
 # Declaring command sections:
-CMDSECTION() { _cmdstash_CMDSECTION "$@"; }
-_cmdstash_CMDSECTION() {
+CMDSECTION() { _cmdroll_CMDSECTION "$@"; }
+_cmdroll_CMDSECTION() {
 	while [ "${1+x}" ]; do ___o="$1"; shift; case "$___o" in
 		--)  break ;;
 		-?*) die "CMDSECTION: unknown option ${___o%"${___o#??}"}" ;;
 		*)   set -- "$___o" "$@"; break ;;
 	esac; done; unset ___o
-	__CMDSTASH_CURSECTION="$(trim "$(printf '%s ' "$@")" | sed \
+	__CMDROLL_CURSECTION="$(trim "$(printf '%s ' "$@")" | sed \
 		'/^[[:space:]]*$/d;s/^/>/')"
 }
 
 # Evaluate all the command definitions in the parent script:
-eval "$(cd "$CMDSTASH_USERWORKDIR" && sed -n <"$CMDSTASH_ARGZERO" \
-'s/^__CMDSTASH__//;t a;b;:a /^[[:blank:]]*$/bb;/^[[:blank:]][[:blank:]]*#/bb;b;:b {n;p;bb;}')"
+eval "$(cd "$CMDROLL_USERWORKDIR" && sed -n <"$CMDROLL_ARGZERO" \
+'s/^__CMDROLL__//;t a;b;:a /^[[:blank:]]*$/bb;/^[[:blank:]][[:blank:]]*#/bb;b;:b {n;p;bb;}')"
 
-# Invoke another command from the cmdstash script (potentially wrapped by a
+# Invoke another command from the cmdroll script (potentially wrapped by a
 # function or command provided with the `-w' option):
 invoke() {
 	___w=''  # wrapper function or command
@@ -191,21 +191,21 @@ invoke() {
 		# shellcheck disable=SC2016  # no expansion between single quotes
 		# shellcheck disable=SC2086  # word splitting is expected here
 		set -- $___w /bin/sh -c 'cd "$0" && exec "$@"' \
-			"${CMDSTASH_USERWORKDIR:?}" \
-			${CMDSTASH_SHELL:?} "${CMDSTASH_ARGZERO:?}" ${CMDSTASH_OPTS?} \
+			"${CMDROLL_USERWORKDIR:?}" \
+			${CMDROLL_SHELL:?} "${CMDROLL_ARGZERO:?}" ${CMDROLL_OPTS?} \
 			${___x:+-x} -- "$@"
 		unset ___w ___x
 		"$@"
 	else
 		# shellcheck disable=SC2086  # word splitting is expected here
-		set -- ${CMDSTASH_SHELL:?} "${CMDSTASH_ARGZERO:?}" ${CMDSTASH_OPTS?} \
+		set -- ${CMDROLL_SHELL:?} "${CMDROLL_ARGZERO:?}" ${CMDROLL_OPTS?} \
 			${___x:+-x} -- "$@"
 		unset ___w ___x
-		( cd "${CMDSTASH_USERWORKDIR:?}" && exec "$@" )
+		( cd "${CMDROLL_USERWORKDIR:?}" && exec "$@" )
 	fi
 }
 
-# Chain cmdstash commands:
+# Chain cmdroll commands:
 chain() {
 	# NB: these "fake" local vars must not collide with those of invoke
 	___d=''  # the delimiter value
@@ -220,9 +220,9 @@ chain() {
 		-v)  ___v=x;;
 		-x)  ___X=x; ___v=x;;
 		-h) printf '%s\n' "\
-usage: $CMDSTASH_ARGZERO chain [-vxC]          COMMAND [COMMAND...]
-       $CMDSTASH_ARGZERO chain [-vxC] -d DELIM COMMAND [ARGS...] [DELIM COMMAND [ARGS...]]...
-       $CMDSTASH_ARGZERO chain -h
+usage: $CMDROLL_ARGZERO chain [-vxC]          COMMAND [COMMAND...]
+       $CMDROLL_ARGZERO chain [-vxC] -d DELIM COMMAND [ARGS...] [DELIM COMMAND [ARGS...]]...
+       $CMDROLL_ARGZERO chain -h
 
 invoke commands in sequence
 
@@ -283,21 +283,21 @@ options:  -v        be verbose and print the invoked commands
 	unset ___d ___D ___v ___X ___C ___i ___j ___k ___l
 }
 
-# Help and usage description listing all the available cmdstash commands:
-cmdstash_usage() {
+# Help and usage description listing all the available cmdroll commands:
+cmdroll_usage() {
 	printf '%s\n' "\
-usage: $CMDSTASH_ARGZERO [-x] COMMAND [ARGS...]
-       $CMDSTASH_ARGZERO -h|-c
+usage: $CMDROLL_ARGZERO [-x] COMMAND [ARGS...]
+       $CMDROLL_ARGZERO -h|-c
 options:   -h   display this help and exit
            -x   enable xtrace during command invocation
            -c   generate a Bash completion script and exit
 " || return 1
-	[ "$(printf '%s\n' "$__CMDSTASH_CMDS" | sed '/^[#>[:blank:]]/d; /^$/d')" ] || {
-		printf '%s\n' "no commands defined or missing \`__CMDSTASH__' marker line"
+	[ "$(printf '%s\n' "$__CMDROLL_CMDS" | sed '/^[#>[:blank:]]/d; /^$/d')" ] || {
+		printf '%s\n' "no commands defined or missing \`__CMDROLL__' marker line"
 		return
 	}
 	printf '%s\n' "commands:"
-	printf '%s\n' "$__CMDSTASH_CMDS" | sed -n '/^#/d; /^$/d;
+	printf '%s\n' "$__CMDROLL_CMDS" | sed -n '/^#/d; /^$/d;
 /^>/ { s/^>/\n -- /p; :H { n; s/^>/ -- /p; t H; } }
 /^\t/ { s/^\t/                        /p; b; }
 s/^[^ ]* //;
@@ -311,127 +311,127 @@ p;'
 	if [ "$ABOUT" ]; then printf '\n%s\n' "$ABOUT"; fi
 }
 
-cmdstash_bash_completion_script() {
-	if [ -t 1 ] && [ ! "${CMDSTASH_STDOUTISATTY:-}" ]; then
-		say "cmdstash: unexpected: stdout is a tty"
+cmdroll_bash_completion_script() {
+	if [ -t 1 ] && [ ! "${CMDROLL_STDOUTISATTY:-}" ]; then
+		say "cmdroll: unexpected: stdout is a tty"
 		die "\
-cmdstash: the completion script must be evaluated by the shell, try running:
-    . <($CMDSTASH_ARGZERO -c)"
+cmdroll: the completion script must be evaluated by the shell, try running:
+    . <($CMDROLL_ARGZERO -c)"
 	fi
 	# shellcheck disable=SC2016
-	printf '%s\n' '__cmdstash_scripts_completion() {
+	printf '%s\n' '__cmdroll_scripts_completion() {
 	local _script="${COMP_WORDS[0]}"
 	[[ -f "$_script" &&\
 	   -x "$_script" &&\
 	   "$_script" =~ .+/.+ &&\
 	   -n "$(sed "/^#!/p;q" <"$_script")" &&\
-	   -n "$(sed -n <"$_script" "s/^__CMDSTASH__//; t a; b;
+	   -n "$(sed -n <"$_script" "s/^__CMDROLL__//; t a; b;
 :a s/^[[:blank:]]*\$//; t b; s/^[[:blank:]][[:blank:]]*#//; t b; b; :b =; q")" ]] || return 1
 	case "${COMP_WORDS[COMP_CWORD]}" in
 		/*|./*|../*)
 			mapfile -t COMPREPLY < <(compgen -f -- "${COMP_WORDS[COMP_CWORD]}");;
 		*)
 			local __cmds
-			__cmds="$(CMDSTASH_COMPLETION=bash "$_script" -\$)"
+			__cmds="$(CMDROLL_COMPLETION=bash "$_script" -\$)"
 			[[ "$__cmds" ]] && mapfile -t COMPREPLY < <(compgen -W "-h $__cmds" \
 				-- "${COMP_WORDS[COMP_CWORD]}")
 	esac
 }
-_cmdstash_complete() {
+_cmdroll_complete() {
 	local _c; for _c; do case "$_c" in
 		""|*[!a-zA-Z0-9_.+-]*)
-			echo >&2 "_cmdstash_complete: skipping unsupported script basename: $_c" ||:
+			echo >&2 "_cmdroll_complete: skipping unsupported script basename: $_c" ||:
 			;;
 		*)
-			__cmdstash_completions+=("$_c")
-			complete -F __cmdstash_scripts_completion -- "$_c" "./$_c"
+			__cmdroll_completions+=("$_c")
+			complete -F __cmdroll_scripts_completion -- "$_c" "./$_c"
 			;;
 	esac; done
 }
-_cmdstash_remove_completions() {
-	local _c; for _c in "${__cmdstash_completions[@]}"; do
+_cmdroll_remove_completions() {
+	local _c; for _c in "${__cmdroll_completions[@]}"; do
 		complete -r -- "$_c" "./$_c"
 	done
-	unset __cmdstash_completions
+	unset __cmdroll_completions
 }'
-	printf '%s\n' "_cmdstash_complete $(quote "${CMDSTASH_ARGZERO##*/}")"
+	printf '%s\n' "_cmdroll_complete $(quote "${CMDROLL_ARGZERO##*/}")"
 }
 
 # Mark our functions as readonly if the shell supports it:
-case ":$CMDSTASH_SHELLFEAT:" in *:readonlyfuncs:*)
+case ":$CMDROLL_SHELLFEAT:" in *:readonlyfuncs:*)
 	# shellcheck disable=SC3045  # `readonly -f' support is validated above
-	readonly -f invoke chain cmdstash_usage
+	readonly -f invoke chain cmdroll_usage
 esac
 
 # Inject the chain command definition:
-[ "${CMDSTASH_NOCHAIN:-}" ] || {
-: "${CMDSTASH_CHAINALIAS=ch}"  # default alias to the chain command
-case " ${CMDSTASH_CHAINALIAS:-}" in *[!" "a-zA-Z0-9_.:@+-]*|*" "-*) \
-die "cmdstash: invalid chain command alias definition: $CMDSTASH_CHAINALIAS";; esac
-[ "$(printf '%s\n' "$__CMDSTASH_CMDS" | sed '/^[#>[:blank:]]/d; /^$/d')" ] &&\
-	__CMDSTASH_CMDS="$(printf '%s\n' "$__CMDSTASH_CMDS" | sed -n "
+[ "${CMDROLL_NOCHAIN:-}" ] || {
+: "${CMDROLL_CHAINALIAS=ch}"  # default alias to the chain command
+case " ${CMDROLL_CHAINALIAS:-}" in *[!" "a-zA-Z0-9_.:@+-]*|*" "-*) \
+die "cmdroll: invalid chain command alias definition: $CMDROLL_CHAINALIAS";; esac
+[ "$(printf '%s\n' "$__CMDROLL_CMDS" | sed '/^[#>[:blank:]]/d; /^$/d')" ] &&\
+	__CMDROLL_CMDS="$(printf '%s\n' "$__CMDROLL_CMDS" | sed -n "
 /^>/ { i\\
-chain chain ${CMDSTASH_CHAINALIAS:-}\\
+chain chain ${CMDROLL_CHAINALIAS:-}\\
 	invoke commands in sequence  (\`chain -h' for more info)
 b cont; }
 \$ { a\\
-chain chain ${CMDSTASH_CHAINALIAS:-}\\
+chain chain ${CMDROLL_CHAINALIAS:-}\\
 	invoke commands in sequence  (\`chain -h' for more info)
 b cont; }
 p; b; :cont { p; n; b cont; }")"
 }
 
-readonly __CMDSTASH_CMDS
-unset __CMDSTASH_CURSECTION
-unset -f CMD _cmdstash_CMD CMDSECTION _cmdstash_CMDSECTION
+readonly __CMDROLL_CMDS
+unset __CMDROLL_CURSECTION
+unset -f CMD _cmdroll_CMD CMDSECTION _cmdroll_CMDSECTION
 
 # Check there is no duplicate commands
 # shellcheck disable=SC2016
-___v="$(printf '\n%s\n' "$__CMDSTASH_CMDS" | sed -n '
+___v="$(printf '\n%s\n' "$__CMDROLL_CMDS" | sed -n '
 :B $bE; s/\n[#>[:blank:]].*//; tB; s/\n[^ ]*  *\(.*\)/\1 /; N; bB;
 :E      s/\n[#>[:blank:]].*//;     s/\n[^ ]*  *\(.*\)/\1 /;
 s/  */ /g; s/ *$//; p;')" || die
 while [ "${___v#* }" != "${___v%% *}" ]; do
 	case " ${___v#* } " in *" ${___v%% *} "*)
-		die "cmdstash: duplicate definition for command or alias: ${___v%% *}";;
+		die "cmdroll: duplicate definition for command or alias: ${___v%% *}";;
 	esac
 	___v="${___v#* }"
 done
 unset ___v
 
 # Check that all the commands have their expected functions:
-[ "${CMDSTASH_NOCMDFUNCCHECK:-}" ] || for ___v in \
-$(printf '%s\n' "$__CMDSTASH_CMDS" | sed '/^[#>[:blank:]]/d; /^$/d; s/ .*//;'); do
+[ "${CMDROLL_NOCMDFUNCCHECK:-}" ] || for ___v in \
+$(printf '%s\n' "$__CMDROLL_CMDS" | sed '/^[#>[:blank:]]/d; /^$/d; s/ .*//;'); do
 	[ "$(PATH='' command -v "$___v" 2>/dev/null ||:)" ] || die \
-		"cmdstash: missing command function: $___v"
+		"cmdroll: missing command function: $___v"
 done
 unset ___v
 
 ___x=''  # xtrace option
 while [ "${1+x}" ]; do ___o="$1"; shift; case "$___o" in
 	-x) ___x=x ;;
-	-h) cmdstash_usage; exit "$?" ;;
-	-c) cmdstash_bash_completion_script; exit "$?" ;;
-	-\$) printf '%s\n' "$__CMDSTASH_CMDS" | sed '/^[#>[:blank:]]/d; /^$/d;
+	-h) cmdroll_usage; exit "$?" ;;
+	-c) cmdroll_bash_completion_script; exit "$?" ;;
+	-\$) printf '%s\n' "$__CMDROLL_CMDS" | sed '/^[#>[:blank:]]/d; /^$/d;
 s/^[^ ]*  *//; s/ .*//;'; exit "$?";;
-#	-\&) printf '%s\n' "$__CMDSTASH_CMDS" | sed '/^[#>[:blank:]]/d; /^$/d;
+#	-\&) printf '%s\n' "$__CMDROLL_CMDS" | sed '/^[#>[:blank:]]/d; /^$/d;
 #s/^[^ ]*  *//; s/  */ /g; s/ *$//;'; exit "$?";;
 	-[xhc\$]?*) set -- "${___o%"${___o#??}"}" "-${___o#??}" "$@" ;;
 	--)  break ;;
-	-?*) die "cmdstash: unknown option ${___o%"${___o#??}"}" ;;
+	-?*) die "cmdroll: unknown option ${___o%"${___o#??}"}" ;;
 	*)   set -- "$___o" "$@"; break ;;
 esac; done; unset ___o
-[ "${1+x}" ] || { cmdstash_usage>&2 ||:; exit 1; }
+[ "${1+x}" ] || { cmdroll_usage>&2 ||:; exit 1; }
 
-CMDSTASH_OPTS="${___x:+-x}"
+CMDROLL_OPTS="${___x:+-x}"
 
-# If "zshnowordsplit", treat CMDSTASH_OPTS as array for auto word-split:
-case ":$CMDSTASH_SHELLFEAT:" in *:zshnowordsplit:*)
-	eval "CMDSTASH_OPTS=($CMDSTASH_OPTS)";;
+# If "zshnowordsplit", treat CMDROLL_OPTS as array for auto word-split:
+case ":$CMDROLL_SHELLFEAT:" in *:zshnowordsplit:*)
+	eval "CMDROLL_OPTS=($CMDROLL_OPTS)";;
 esac
 
-# Freeze CMDSTASH_OPTS:
-readonly CMDSTASH_OPTS
+# Freeze CMDROLL_OPTS:
+readonly CMDROLL_OPTS
 
 ___c="$(
 	case "$1" in
@@ -440,7 +440,7 @@ ___c="$(
 		*) ___v="$1";;
 	esac
 	# shellcheck disable=SC2016
-	printf '%s\n' "$__CMDSTASH_CMDS" | sed -n '/^[#>[:blank:]]/d; /^$/d;
+	printf '%s\n' "$__CMDROLL_CMDS" | sed -n '/^[#>[:blank:]]/d; /^$/d;
 s/$/ /; / '"$___v"' /!b; s/^\([^ ]*  *[^ ]*\).*/\1/; ${p; q;}; N;
 s/\n\t/ /p; t hlp; s/\n.*//; p; q; :hlp n; s/^\t//p; t hlp; q' || die
 )" || exit 1
@@ -452,7 +452,7 @@ unset ___c; shift
 readonly CMD CMDFUNC CMDHELP
 
 # Append the command name to the self contaxtual value for say/die:
-__CMDSTASH_SELF="$CMDSTASH_ARGZERO $CMD"
+__CMDROLL_SELF="$CMDROLL_ARGZERO $CMD"
 
 # That's it, handle the xtrace option (if asked), run the command and exit:
 if [ "$___x" ]; then unset ___x; set -x; else unset ___x; fi

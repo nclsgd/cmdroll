@@ -7,11 +7,11 @@ set -eu; (set -o pipefail) 2>/dev/null && set -o pipefail
 # Save aside the user workdir and change workdir to this script's location:
 readonly UWD="${PWD:?}"; cd "${0%"${0##*/}"}."
 
-# Load cmdstash:
-CMDSTASH_USERWORKDIR="$UWD"; . ./cmdsta.sh
-__CMDSTASH__  # here begins the cmdstash script, do not edit this marker line
+# Load cmdroll:
+CMDROLL_USERWORKDIR="$UWD"; . ./cmdroll.sh
+__CMDROLL__  # here begins the cmdroll script, do not edit this marker line
 
-# Just a simple command to expose how cmdstash works
+# Just a simple command to expose how cmdroll works
 CMD helloworld hw -- 'say hello world'
 helloworld() {
 	echo 'Hello world!'

@@ -6,7 +6,7 @@ set -euo pipefail
 # Save aside the user workdir and change workdir to this script's location:
 readonly UWD="${PWD:?}"; cd "${0%"${0##*/}"}."
 
-# Find project basedir to load cmdstash from there and retrieve other
+# Find project basedir to load cmdroll from there and retrieve other
 # components from the base location:
 PROJECTBASEDIR="$(set '' ''; cd .; while [ "$2" != / ]; do
 [ -f .projectbasedir ] && { echo "${1:-.}"; exit 0; };
@@ -14,11 +14,11 @@ set "$1${1:+/}.." "$PWD"; cd ..; done; echo >&2 \
 "$0: could not determine PROJECTBASEDIR by looking up parent dirs"
 exit 1)" || exit 1; readonly PROJECTBASEDIR
 
-# Load cmdstash:
-CMDSTASH_USERWORKDIR="$UWD"; . "${PROJECTBASEDIR:?}/cmdsta.sh"
-__CMDSTASH__  # here begins the cmdstash script, do not edit this marker line
+# Load cmdroll:
+CMDROLL_USERWORKDIR="$UWD"; . "${PROJECTBASEDIR:?}/cmdroll.sh"
+__CMDROLL__  # here begins the cmdroll script, do not edit this marker line
 
-# Just a silly command to expose how cmdstash works
+# Just a silly command to expose how cmdroll works
 CMD helloworld hw -- 'say hello world'
 helloworld() {
 	echo 'Hello world!'

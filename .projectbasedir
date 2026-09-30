@@ -1,2 +1,2 @@
-This file serves as a filesystem boundary mark to let cmdstash scripts from
+This file serves as a filesystem boundary mark to let cmdroll scripts from
 child directories find this project base directory and its relative path.
